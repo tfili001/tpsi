@@ -1,0 +1,4 @@
+./autogen.sh 
+./configure
+Error Check for
+dependencies

@@ -1,0 +1,76 @@
+#!/usr/bin/python3
+import requests
+import json
+import tarfile
+import sys
+import os
+import difflib
+
+search_prefix = "https://api.github.com/search/repositories?q="
+tar_url = "https://api.github.com/repos/"
+
+class Pkg:
+	def __init__(self,pkg_name,username):
+		self.pkg_name = pkg_name
+		self.username = username
+	def printInfo(pkg):
+		print("%-30s %s" % (pkg.pkg_name, pkg.username))
+	dependencies  = []
+
+def pkgSearch(search_pkg_name):
+	pkglist = []
+	search_url = search_prefix + search_pkg_name
+	rdata = requests.get(search_url).json()
+	with open("tmp.json", 'w') as outfile:
+		json.dump(rdata, outfile)
+	jsonData = rdata["items"]
+	#os.remove("tmp.json")
+	for item in (jsonData):
+		pkg = Pkg(item.get("name"),(item["owner"]["login"]))		
+		pkglist.append(pkg)
+
+	pkglist = sorted(pkglist,key=lambda pkg: difflib.SequenceMatcher
+		(None, pkg.pkg_name,search_pkg_name).ratio(),reverse=True)	
+	return pkglist
+
+def showResults(list):
+	print("%-30s %s" % ("Suggestions", "Author"))
+	print('_' * 55)
+	for pkg in list[0:15]: pkg.printInfo()
+	print('_' * 55)
+
+def pkgDL(list):
+	pkg = list[0] # Top Selection
+	#os.system('clear')
+	print("Downloading tar.gz...")
+	r = requests.get(tar_url + pkg.username + "/"
+		   + pkg.pkg_name + "/tarball/master")
+	print("Download Complete")
+	open(pkg.pkg_name + ".tar.gz", 'wb').write(r.content)
+
+	# EXTRACT to /path/to/file BITCH
+
+#def checkDependencies():
+
+'''
+def installPkg():
+	./autogen.sh  check for altenatives
+	./configure
+	makeg
+	make insall
+	report compilation errors
+'''
+
+def main():
+	#os.system('clear')
+	if len(sys.argv) == 1:
+		print("Tpsi Error: Missing Argument")
+	else:	
+		#pkgDL(pkgSearch(sys.argv[1]))
+		list = pkgSearch(sys.argv[1])	
+		showResults(list)
+		pkgDL(list)	
+	print("Target Path: /usr/local/bin")
+	
+main()
+
